@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
-members = ["xbuild", "common", "loader/*", "api/*"]
-exclude = ["loader/ebpf"]
+members = ["bin/*", "lib", "public"]
+exclude = ["bin/kernelspace"]
 
 [profile.dev]
 lto = true

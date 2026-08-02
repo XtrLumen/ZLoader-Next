@@ -1,0 +1,62 @@
+name: Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+    runs-on: macos-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Android NDK
+        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;29.0.14206865"
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly-2026-01-01
+          target: |
+            aarch64-linux-android
+            x86_64-linux-android
+          components: rust-src
+          cache: true
+
+      - name: Cache cargo-tool
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin
+          key: macos-latest-cargo-bin-v1
+
+      - name: Install cargo-ndk
+        run: |
+          command -v cargo-ndk || {
+            cargo install cargo-ndk
+          }
+
+      - name: Install bpf-linker
+        run: |
+          command -v bpf-linker || {
+            cargo install bpf-linker
+          }
+
+      - name: Install LLVM
+        run: brew install llvm
+
+      - name: Install sha3sum
+        run: brew install sha3sum
+
+      - name: Build with cargo
+        run: ./cargopp zip
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZLoader-Next
+          path: |
+            target/outputs/release/*.zip
+            target/outputs/debug/*.zip

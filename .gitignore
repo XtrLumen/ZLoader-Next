@@ -1,3 +1,7 @@
-/.idea
-/target
-/.vscode
+build
+target
+.idea
+.gradle
+.kotlin
+.DS_Store
+/local.properties

@@ -1,0 +1,17 @@
+type magisk_file file_type
+
+typeattribute magisk_file mlstrustedobject
+
+allow * magisk_file chr_file  *
+allow * magisk_file dir       *
+allow * magisk_file file      *
+allow * magisk_file fifo_file *
+allow * magisk_file lnk_file  *
+allow * magisk_file sock_file *
+
+allow zygote zygote process execmem
+allow zygote adb_data_file dir search
+allow system_server system_server process execmem
+allow system_server adb_data_file dir search
+
+allow dex2oat dex2oat_exec file execute_no_trans

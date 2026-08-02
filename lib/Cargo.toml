@@ -1,0 +1,23 @@
+[package]
+name = "loader"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+public = {
+    path = "../public"
+}
+rusqlite = {
+    version = "0.31.0",
+    features = ["bundled"]
+}
+log = "0.4.33"
+ctor = "1.0.10"
+libc = "1.0.0-alpha.4"
+anyhow = "1.0.104"
+notify = "9.0.0-rc.4"
+fragile = "2.0"
+jni-sys = "0.4"
+android_logger = "0.15.1"

@@ -1,0 +1,32 @@
+[package]
+name = "ebpf"
+edition = "2021"
+
+[dependencies]
+private = {
+    path = "../private"
+}
+aya-ebpf = {
+    git = "https://github.com/aya-rs/aya"
+}
+aya-log-ebpf = {
+    git = "https://github.com/aya-rs/aya"
+}
+log = "0.4.33"
+seq-macro = "0.3.6"
+
+[profile.dev]
+codegen-units = 1
+debug = false
+debug-assertions = false
+incremental = false
+lto = true
+opt-level = 3
+overflow-checks = false
+panic = "abort"
+rpath = false
+
+[profile.release]
+codegen-units = 1
+lto = true
+panic = "abort"

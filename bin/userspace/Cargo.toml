@@ -1,0 +1,38 @@
+[package]
+name = "zloader"
+edition = "2021"
+
+[dependencies]
+public = {
+    path  = "../../public"
+}
+private = {
+    path = "../private"
+}
+nix = {
+    version = "0.28",
+    features = ["fs", "resource", "process", "signal", "uio", "ptrace"]
+}
+clap = {
+    version = "4.6.5",
+    features = ["derive"]
+}
+tokio = {
+    version = "1.53.1",
+    features = ["full"]
+}
+rustix = {
+    version = "1.1.4",
+    features = ["thread"]
+}
+aya = "0.13.1"
+log = "0.4.33"
+anyhow = "1"
+object = "0.40.0"
+procfs = "0.18.0"
+aya-log = "0.2.1"
+jni-sys = "0.4.1"
+lzma-rs = "0.3.0"
+libloading = "0.9.0"
+cpp_demangle = "0.5.1"
+android_logger = "0.15.1"

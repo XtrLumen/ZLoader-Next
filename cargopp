@@ -1,0 +1,161 @@
+#!/bin/zsh
+
+[ ${#} -eq 0 ] && echo "No arguments" && exit 2
+
+build_kernelspace() {
+    local rust_flags="--cfg ebpf_target_arch=\"${ARCH}\""
+    [ "${1}" = "debug" ] && rust_flags="${rust_flags} --cfg is_debug"
+    [ "${1}" = "release" ] && local variant="--release"
+
+    (
+        cd ./bin/kernelspace
+
+        PATH="/opt/homebrew/opt/llvm/bin:${PATH}" \
+        RUSTFLAGS=${rust_flags} \
+        CARGO_CFG_BPF_TARGET_ARCH=${ARCH} \
+        cargo build ${variant}
+    )
+}
+
+build_userspace() {
+    [ "${1}" = "release" ] && local variant="--release"
+
+    PROFILE="${1}" \
+    cargo ndk --platform 31 build --target "${ARCH}-linux-android" ${variant}
+}
+
+assemble() {
+    echo "Assemble ZLoader Next ${1}"
+
+    local module_id="zloadersu"
+    local module_name="ZLoader Next"
+    local version_name="v1.0.0"
+    local version_code="$(git rev-list HEAD --count)"
+    local version_hash="$(git rev-parse --verify --short HEAD)"
+
+    local project_root="$(pwd)"
+    local target="${project_root}/target/${ARCH}-linux-android/${1}"
+    local outputs_path="${project_root}/target/outputs/module/${1}"
+    local variant_path="${project_root}/target/outputs/${1}"
+    local zip_file_name="${module_name// /-}-${version_name}-${version_code}-${version_hash}-${1}.zip"
+
+    (
+        cd "./module"
+
+        # prepareModuleFiles
+        {
+            # doFirst
+            {
+                rm -rf "${outputs_path}"
+            }
+
+            # copyTask
+            {
+                mkdir -p "${outputs_path}"
+                    cp -r ./src/* "${outputs_path}"
+                        sed -i "" \
+                        -e "s|%MODULE_ID%|${module_id}|g" \
+                        -e "s|%MODULE_NAME%|${module_name}|g" \
+                        -e "s|%VERSION_NAME%|${version_name} (${version_code}-${version_hash}-${1})|g" \
+                        -e "s|%VERSION_CODE%|${version_code}|g" \
+                        "${outputs_path}/module.prop"
+                mkdir -p "${outputs_path}/bin"
+                    cp "${target}/zloader" "${outputs_path}/bin"
+                mkdir -p "${outputs_path}/lib"
+                    cp "${target}/libloader.so" "${outputs_path}/lib"
+            }
+        }
+
+        # signModuleFiles
+        {
+            for file in "${outputs_path}"/**/*(^/)
+            do
+                [[ "${file}" == "${outputs_path}/MANIFEST*" ]] && continue
+
+                local hash_path="${outputs_path}/MANIFEST/${file#${outputs_path}/}.sha256"
+                mkdir -p "$(dirname "${hash_path}")"
+                sha3-256sum "${file}" | awk '{print $1}' | tr -d '\n' > "${hash_path}"
+            done
+        }
+
+        # zipTask
+        {
+            mkdir -p "${variant_path}"
+            cd "${outputs_path}"
+            find ./ -exec touch -t 0001010000 {} +
+            zip -qr "${variant_path}/${zip_file_name}" ./*
+        }
+
+        # doLast
+        {
+            push() {
+                adb push "${variant_path}/${zip_file_name}" "/data/local/tmp"
+            }
+
+            if [ ${#} -eq 2 ]
+            then
+                case ${2} in
+                    push)
+                        push
+                        ;;
+                    1|2)
+                        push && {
+                            case ${2} in
+                                1)
+                                    adb shell su -c ksud module install "/data/local/tmp/${zip_file_name}"
+                                    ;;
+                                2)
+                                    adb shell su -c apd module install "/data/local/tmp/${zip_file_name}"
+                            esac
+                        }
+                esac
+            fi
+        }
+    )
+}
+
+build() {
+    build_kernelspace ${1} && \
+    build_userspace ${1} && \
+    assemble "${@}"
+}
+
+ARCH="aarch64"
+if [ ${#} -eq 2 ] && [ "${2}" = "x86" ]
+then
+    ARCH="x86_64"
+fi
+
+case "${1}" in
+    zipRelease)
+        build release
+        ;;
+    zipDebug)
+        build debug
+        ;;
+    zip)
+        build release
+        build debug
+        ;;
+    pushRelease)
+        build release push
+        ;;
+    pushDebug)
+        build debug push
+        ;;
+    push)
+        build release push
+        build debug push
+        ;;
+    ksud)
+        build release 1
+        ;;
+    apd)
+        build release 2
+        ;;
+    clean)
+        cargo clean
+        ;;
+    *)
+        echo "Invalid arguments" && exit 1
+esac
